@@ -1,0 +1,8 @@
+from PyPDF2 import PdfMerger
+
+merger = PdfMerger()
+A=input("enter the  name of first pdf")
+B=input("enter the  name of second pdf")
+merger.append("A.pdf")
+merger.append("B.pdf")
+merger.write("merged.pdf")
