@@ -1,0 +1,127 @@
+import speech_recognition as sr
+import pyttsx3
+import webbrowser
+import datetime
+import requests
+import os
+import smtplib
+import time
+import random
+
+def say(text):
+    engine = pyttsx3.init()
+    engine.say(text)
+    engine.runAndWait()
+    engine.stop()  # Ensure the engine is properly closed
+
+def take_command():
+    r = sr.Recognizer()
+    with sr.Microphone() as source:
+        r.pause_threshold = 1
+        print("Listening...")
+        audio = r.listen(source)
+        try:
+            query = r.recognize_google(audio, language="en-in")
+            print(f"User said: {query}")
+            return query
+        except sr.UnknownValueError:
+            print("Sorry, I did not understand that.")
+            return "Sorry, I did not understand that."
+        except sr.RequestError:
+            print("Could not request results; check your network connection.")
+            return "Could not request results; check your network connection."
+        except Exception as e:
+            print(f"Some error occurred: {e}")
+            return "Some error occurred."
+
+def open_site(query):
+    sites = [["youtube", "https://youtube.com"], ["wikipedia", "https://wikipedia.org"], ["google", "https://google.com"], ["twitter", "https://twitter.com"]]
+    for site in sites:
+        if f"open {site[0]}" in query.lower():
+            say(f"Opening {site[0]}, sir...")
+            webbrowser.open(site[1])
+            return True
+    return False
+
+def tell_time():
+    strftime = datetime.datetime.now().strftime("%H:%M:%S")
+    say(f"Sir, the time is {strftime}")
+
+def get_weather(city):
+    api_key = "your_api_key"
+    base_url = f"http://api.openweathermap.org/data/2.5/weather?q={city}&appid={api_key}&units=metric"
+    response = requests.get(base_url)
+    data = response.json()
+    if data["cod"] != "404":
+        main = data["main"]
+        weather = data["weather"][0]
+        say(f"The temperature in {city} is {main['temp']}°C with {weather['description']}.")
+    else:
+        say("City not found.")
+
+def set_reminder(reminder, seconds):
+    say(f"Reminder set for {seconds} seconds.")
+    time.sleep(seconds)
+    say(f"Reminder: {reminder}")
+
+def play_music(song):
+    music_dir = "path_to_your_music_directory"
+    songs = os.listdir(music_dir)
+    for s in songs:
+        if song.lower() in s.lower():
+            os.startfile(os.path.join(music_dir, s))
+            say(f"Playing {song}")
+            return
+    say("Song not found.")
+
+def send_email(to, subject, body):
+    server = smtplib.SMTP('smtp.gmail.com', 587)
+    server.starttls()
+    server.login("your_email", "your_password")
+    message = f"Subject: {subject}\n\n{body}"
+    server.sendmail("your_email", to, message)
+    server.quit()
+    say("Email has been sent.")
+
+def get_news():
+    api_key = "your_news_api_key"
+    base_url = f"https://newsapi.org/v2/top-headlines?country=in&apiKey={api_key}"
+    response = requests.get(base_url)
+    articles = response.json()["articles"]
+    for article in articles[:5]:
+        say(article["title"])
+
+def tell_joke():
+    jokes = ["Why don't scientists trust atoms? Because they make up everything!", 
+             "Why did the scarecrow win an award? Because he was outstanding in his field!"]
+    say(random.choice(jokes))
+
+if __name__ == '__main__':
+    say("Welcome sir, I am Jarvis. How can I help you?")
+    while True:
+        query = take_command()
+        if "exit" in query.lower():
+            say("Goodbye sir!")
+            break
+        if not open_site(query):
+            if "the time" in query.lower():
+                tell_time()
+            elif "weather in" in query.lower():
+                city = query.split("in")[-1].strip()
+                get_weather(city)
+            elif "set reminder" in query.lower():
+                reminder = query.split("for")[-1].strip()
+                set_reminder(reminder, 10)  # Example: set reminder for 10 seconds
+            elif "play music" in query.lower():
+                song = query.split("play music")[-1].strip()
+                play_music(song)
+            elif "send email" in query.lower():
+                say("What is the subject?")
+                subject = take_command()
+                say("What should I say?")
+                body = take_command()
+                send_email("recipient_email", subject, body)
+            elif "news" in query.lower():
+                get_news()
+            elif "tell me a joke" in query.lower():
+                tell_joke()
